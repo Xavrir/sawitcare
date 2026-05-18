@@ -13,7 +13,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", default="yolo11n.pt", help="YOLO model name or path, e.g. yolo11n.pt or yolov8n.pt")
     parser.add_argument("--data", type=Path, default=Path("configs/detection_data.yaml"))
     parser.add_argument("--imgsz", type=int, default=640)
-    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--batch", type=int, default=8)
     parser.add_argument("--device", default="0")
     parser.add_argument("--output-dir", type=Path, default=Path("models/detector"))

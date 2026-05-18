@@ -80,6 +80,83 @@ def detect_boxes(detector: YOLO, image: np.ndarray, conf: float = 0.25) -> list[
     return boxes
 
 
+def _tile_starts(length: int, tile_size: int, overlap: float) -> list[int]:
+    if length <= tile_size:
+        return [0]
+    stride = max(1, int(tile_size * (1.0 - overlap)))
+    starts = list(range(0, max(1, length - tile_size + 1), stride))
+    last = length - tile_size
+    if starts[-1] != last:
+        starts.append(last)
+    return starts
+
+
+def _clip_box(box: tuple[int, int, int, int], width: int, height: int) -> tuple[int, int, int, int]:
+    x1, y1, x2, y2 = box
+    return max(0, x1), max(0, y1), min(width, x2), min(height, y2)
+
+
+def _valid_box(box: tuple[int, int, int, int]) -> bool:
+    x1, y1, x2, y2 = box
+    return x2 > x1 and y2 > y1
+
+
+def _box_iou(box: tuple[int, int, int, int], boxes: np.ndarray) -> np.ndarray:
+    x1 = np.maximum(box[0], boxes[:, 0])
+    y1 = np.maximum(box[1], boxes[:, 1])
+    x2 = np.minimum(box[2], boxes[:, 2])
+    y2 = np.minimum(box[3], boxes[:, 3])
+    intersection = np.maximum(0, x2 - x1) * np.maximum(0, y2 - y1)
+    box_area = max(0, box[2] - box[0]) * max(0, box[3] - box[1])
+    boxes_area = np.maximum(0, boxes[:, 2] - boxes[:, 0]) * np.maximum(0, boxes[:, 3] - boxes[:, 1])
+    union = box_area + boxes_area - intersection
+    return intersection / np.maximum(union, 1e-6)
+
+
+def _nms_boxes(
+    boxes: list[tuple[tuple[int, int, int, int], float]],
+    iou_threshold: float,
+) -> list[tuple[tuple[int, int, int, int], float]]:
+    if not boxes:
+        return []
+    coords = np.array([box for box, _ in boxes], dtype=np.float32)
+    scores = np.array([score for _, score in boxes], dtype=np.float32)
+    order = scores.argsort()[::-1]
+    keep: list[int] = []
+    while order.size > 0:
+        current = int(order[0])
+        keep.append(current)
+        if order.size == 1:
+            break
+        ious = _box_iou(tuple(coords[current].astype(int)), coords[order[1:]])
+        order = order[1:][ious <= iou_threshold]
+    return [boxes[index] for index in keep]
+
+
+def detect_boxes_tiled(
+    detector: YOLO,
+    image: np.ndarray,
+    conf: float = 0.25,
+    tile_size: int = 640,
+    overlap: float = 0.2,
+    nms_iou: float = 0.5,
+) -> list[tuple[tuple[int, int, int, int], float]]:
+    if tile_size <= 0:
+        return detect_boxes(detector, image, conf)
+    height, width = image.shape[:2]
+    tile_size = max(1, tile_size)
+    overlap = min(max(overlap, 0.0), 0.9)
+    boxes: list[tuple[tuple[int, int, int, int], float]] = []
+    for y in _tile_starts(height, tile_size, overlap):
+        for x in _tile_starts(width, tile_size, overlap):
+            tile = image[y : min(y + tile_size, height), x : min(x + tile_size, width)]
+            for (x1, y1, x2, y2), score in detect_boxes(detector, tile, conf):
+                full_box = _clip_box((x1 + x, y1 + y, x2 + x, y2 + y), width, height)
+                if _valid_box(full_box):
+                    boxes.append((full_box, score))
+    return _nms_boxes(boxes, nms_iou)
+
+
 def classify_crop(model: nn.Module, classes: list[str], crop_bgr: np.ndarray, device: torch.device) -> tuple[str, float]:
     rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
     pil = Image.fromarray(rgb)
@@ -90,12 +167,32 @@ def classify_crop(model: nn.Module, classes: list[str], crop_bgr: np.ndarray, de
     return classes[idx], float(probs[idx].item())
 
 
-def run_image_pipeline(image: np.ndarray, detector: YOLO, classifier: nn.Module, classes: list[str], device: torch.device, conf: float = 0.25, padding: float = 0.2, keep_crops: bool = False) -> tuple[np.ndarray, list[TreePrediction]]:
+def run_image_pipeline(
+    image: np.ndarray,
+    detector: YOLO,
+    classifier: nn.Module,
+    classes: list[str],
+    device: torch.device,
+    conf: float = 0.25,
+    padding: float = 0.2,
+    keep_crops: bool = False,
+    tile_size: int = 0,
+    tile_overlap: float = 0.2,
+    nms_iou: float = 0.5,
+    classifier_conf: float = 0.0,
+    short_labels: bool = False,
+    show_detector_conf: bool = True,
+) -> tuple[np.ndarray, list[TreePrediction]]:
     annotated = image.copy()
     predictions: list[TreePrediction] = []
-    for tree_id, (box, det_conf) in enumerate(detect_boxes(detector, image, conf), start=1):
+    if tile_size > 0:
+        boxes = detect_boxes_tiled(detector, image, conf, tile_size, tile_overlap, nms_iou)
+    else:
+        boxes = detect_boxes(detector, image, conf)
+    for tree_id, (box, det_conf) in enumerate(boxes, start=1):
         crop, padded_box = crop_with_padding(image, box, padding)
         label, cls_conf = classify_crop(classifier, classes, crop, device)
-        draw_prediction(annotated, padded_box, label, cls_conf, det_conf)
-        predictions.append(TreePrediction(tree_id, padded_box, det_conf, label, cls_conf, crop if keep_crops else None))
+        display_label = label if cls_conf >= classifier_conf else "uncertain"
+        draw_prediction(annotated, padded_box, display_label, cls_conf, det_conf, short_labels, show_detector_conf)
+        predictions.append(TreePrediction(tree_id, padded_box, det_conf, display_label, cls_conf, crop if keep_crops else None))
     return annotated, predictions
