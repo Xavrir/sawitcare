@@ -1,6 +1,6 @@
-# SawitCare ML
+# SawitCare
 
-SawitCare ML is the machine learning pipeline for early screening of oil palm trees in drone images and videos. It detects individual oil palm tree crowns, crops each detected tree, then classifies each crop as `healthy` or `suspicious`.
+SawitCare is the machine learning pipeline for early screening of oil palm trees in drone images and videos. It detects individual oil palm tree crowns, crops each detected tree, then classifies each crop as `healthy` or `suspicious`.
 
 This repository contains only the ML part. It does not include the full application UI.
 
