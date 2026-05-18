@@ -1,0 +1,6 @@
+path: /home/xavrir/sawitcare-ml/data/processed/detection
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: oil_palm_tree

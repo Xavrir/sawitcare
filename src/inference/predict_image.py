@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+import pandas as pd
+
+from src.inference.pipeline import load_classifier, load_detector, resolve_device, run_image_pipeline
+from src.utils.image_utils import read_image, write_image
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run SawitCare image inference.")
+    parser.add_argument("--image", type=Path, required=True)
+    parser.add_argument("--detector", type=Path, required=True)
+    parser.add_argument("--classifier", type=Path, required=True)
+    parser.add_argument("--conf", type=float, default=0.25)
+    parser.add_argument("--padding", type=float, default=0.2)
+    parser.add_argument("--device", default=None)
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    image = read_image(args.image)
+    device = resolve_device(args.device)
+    detector = load_detector(args.detector)
+    classifier, classes = load_classifier(args.classifier, device)
+    annotated, predictions = run_image_pipeline(image, detector, classifier, classes, device, args.conf, args.padding)
+    out_image = Path("outputs/images") / f"{args.image.stem}_annotated{args.image.suffix}"
+    write_image(out_image, annotated)
+    rows = [{"image_name": args.image.name, "tree_id": p.tree_id, "x1": p.box[0], "y1": p.box[1], "x2": p.box[2], "y2": p.box[3], "detector_confidence": p.detector_confidence, "health_label": p.health_label, "classifier_confidence": p.classifier_confidence} for p in predictions]
+    out_csv = Path("outputs/predictions") / f"{args.image.stem}_predictions.csv"
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(rows).to_csv(out_csv, index=False)
+    print(f"Saved annotated image: {out_image}")
+    print(f"Saved predictions CSV: {out_csv}")
+
+
+if __name__ == "__main__":
+    main()

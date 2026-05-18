@@ -1,0 +1,6 @@
+data_dir: data/processed/classification
+classes:
+  - healthy
+  - suspicious
+image_size: 224
+model: efficientnet_b0
