@@ -30,6 +30,7 @@ MIN_BOX_AREA = int(os.environ.get("MIN_BOX_AREA", "1200"))
 SHORT_LABELS = os.environ.get("SHORT_LABELS", "1") != "0"
 SUMMARY_BOX = os.environ.get("SUMMARY_BOX", "1") != "0"
 PERSIST_ANNOTATIONS = os.environ.get("PERSIST_ANNOTATIONS", "1") != "0"
+SHOW_BOX_LABELS = os.environ.get("SHOW_BOX_LABELS", "0") != "0"
 SHOW_CLASSIFIER_CONF = os.environ.get("SHOW_CLASSIFIER_CONF", "0") != "0"
 SHOW_DETECTOR_CONF = os.environ.get("SHOW_DETECTOR_CONF", "0") != "0"
 
@@ -254,11 +255,13 @@ def draw_prediction(
 ) -> None:
     x1, y1, x2, y2 = box
     color = COLORS.get(label, (255, 255, 255))
+    cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+    if not SHOW_BOX_LABELS:
+        return
     display_label = SHORT_LABEL_MAP.get(label, label) if SHORT_LABELS else label
     text = f"{display_label} {cls_conf:.2f}" if SHOW_CLASSIFIER_CONF else display_label
     if SHOW_DETECTOR_CONF:
         text += f" | tree {det_conf:.2f}"
-    cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
     (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.55, 2)
     y_text = max(0, y1 - th - 8)
     cv2.rectangle(image, (x1, y_text), (x1 + tw + 8, y_text + th + 8), color, -1)
@@ -348,7 +351,8 @@ def main() -> None:
     print(
         "Noise controls: "
         f"conf={CONF}, nms_iou={NMS_IOU}, classifier_conf={CLASSIFIER_CONF}, "
-        f"min_box={MIN_BOX_WIDTH}x{MIN_BOX_HEIGHT}, min_area={MIN_BOX_AREA}",
+        f"min_box={MIN_BOX_WIDTH}x{MIN_BOX_HEIGHT}, min_area={MIN_BOX_AREA}, "
+        f"show_box_labels={SHOW_BOX_LABELS}",
         flush=True,
     )
 
