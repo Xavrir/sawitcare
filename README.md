@@ -21,6 +21,7 @@ sawitcare-ml/
   configs/                  # YOLO and classifier configs
   data/raw/                 # Original datasets
   data/processed/           # Split/clean training data
+  examples/videos/          # Committed presentation/sample videos
   models/                   # Saved trained weights
   outputs/                  # Annotated media, crops, CSVs, metrics
   src/data/                 # Dataset cleaning and splitting scripts
@@ -187,7 +188,7 @@ image_name, tree_id, x1, y1, x2, y2, detector_confidence, health_label, classifi
 
 ```bash
 python src/inference/predict_video.py \
-  --video samples/drone_video.mp4 \
+  --video examples/videos/road_rainforest_oil_palm_indonesia.mp4 \
   --detector models/detector/yolo11n_best.pt \
   --classifier models/classifier/efficientnet_b0_best.pt \
   --frame_step 15
@@ -198,12 +199,18 @@ Outputs:
 - Annotated video: `outputs/videos/`
 - Frame-level CSV summary: `outputs/predictions/`
 
+Committed example video:
+
+- `examples/videos/road_rainforest_oil_palm_indonesia.mp4`
+- Source filename: `Aerial view of a road separating rainforest from an oil palm plantation in Indonesia.mp4`
+- Format: H.264, 1920x1080, 27.4 seconds
+
 ## Presentation demo
 
 For a cleaner presentation command, use the demo wrapper:
 
 ```bash
-python demo_sawitcare.py --video "path/to/drone_video.mp4"
+python demo_sawitcare.py --video examples/videos/road_rainforest_oil_palm_indonesia.mp4
 ```
 
 The wrapper runs the recommended demo settings:
