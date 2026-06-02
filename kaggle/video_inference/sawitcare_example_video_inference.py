@@ -19,7 +19,7 @@ START_FRAME = int(os.environ.get("START_FRAME", "0"))
 MAX_FRAMES = os.environ.get("MAX_FRAMES", "300")
 MAX_FRAMES_INT = int(MAX_FRAMES) if MAX_FRAMES else None
 CONF = float(os.environ.get("CONF", "0.45"))
-CLASSIFIER_CONF = float(os.environ.get("CLASSIFIER_CONF", "0.70"))
+LABEL_SWITCH_CONF = float(os.environ.get("LABEL_SWITCH_CONF", "0.70"))
 PADDING = float(os.environ.get("PADDING", "0.2"))
 TILE_SIZE = int(os.environ.get("TILE_SIZE", "640"))
 TILE_OVERLAP = float(os.environ.get("TILE_OVERLAP", "0.2"))
@@ -27,6 +27,8 @@ NMS_IOU = float(os.environ.get("NMS_IOU", "0.35"))
 MIN_BOX_WIDTH = int(os.environ.get("MIN_BOX_WIDTH", "28"))
 MIN_BOX_HEIGHT = int(os.environ.get("MIN_BOX_HEIGHT", "28"))
 MIN_BOX_AREA = int(os.environ.get("MIN_BOX_AREA", "1200"))
+LABEL_SMOOTHING = os.environ.get("LABEL_SMOOTHING", "1") != "0"
+TRACK_IOU = float(os.environ.get("TRACK_IOU", "0.20"))
 SHORT_LABELS = os.environ.get("SHORT_LABELS", "1") != "0"
 SUMMARY_BOX = os.environ.get("SUMMARY_BOX", "1") != "0"
 PERSIST_ANNOTATIONS = os.environ.get("PERSIST_ANNOTATIONS", "1") != "0"
@@ -293,12 +295,43 @@ def count_predictions(predictions: list[TreePrediction]) -> tuple[int, int, int,
     return len(predictions), healthy, suspicious, uncertain
 
 
+def match_previous_prediction(
+    box: tuple[int, int, int, int],
+    previous_predictions: list[TreePrediction],
+) -> TreePrediction | None:
+    if not previous_predictions:
+        return None
+    previous_boxes = np.array([prediction.box for prediction in previous_predictions], dtype=np.float32)
+    ious = _box_iou(box, previous_boxes)
+    best_index = int(np.argmax(ious))
+    if float(ious[best_index]) < TRACK_IOU:
+        return None
+    return previous_predictions[best_index]
+
+
+def stable_display_label(
+    label: str,
+    cls_conf: float,
+    box: tuple[int, int, int, int],
+    previous_predictions: list[TreePrediction],
+) -> str:
+    if not LABEL_SMOOTHING:
+        return label
+    previous = match_previous_prediction(box, previous_predictions)
+    if previous is None or previous.health_label == label:
+        return label
+    if cls_conf < LABEL_SWITCH_CONF:
+        return previous.health_label
+    return label
+
+
 def run_frame(
     frame: np.ndarray,
     detector: YOLO,
     classifier: nn.Module,
     classes: list[str],
     device: torch.device,
+    previous_predictions: list[TreePrediction],
 ) -> tuple[np.ndarray, list[TreePrediction]]:
     annotated = frame.copy()
     predictions: list[TreePrediction] = []
@@ -306,7 +339,7 @@ def run_frame(
     for tree_id, (box, det_conf) in enumerate(boxes, start=1):
         crop, padded_box = crop_with_padding(frame, box, PADDING)
         label, cls_conf = classify_crop(classifier, classes, crop, device)
-        display_label = label if cls_conf >= CLASSIFIER_CONF else "uncertain"
+        display_label = stable_display_label(label, cls_conf, padded_box, previous_predictions)
         draw_prediction(annotated, padded_box, display_label, cls_conf, det_conf)
         predictions.append(TreePrediction(tree_id, padded_box, det_conf, display_label, cls_conf))
     if SUMMARY_BOX:
@@ -350,9 +383,9 @@ def main() -> None:
     print(f"Max frames: {MAX_FRAMES_INT if MAX_FRAMES_INT is not None else 'full video'}", flush=True)
     print(
         "Noise controls: "
-        f"conf={CONF}, nms_iou={NMS_IOU}, classifier_conf={CLASSIFIER_CONF}, "
+        f"conf={CONF}, nms_iou={NMS_IOU}, label_switch_conf={LABEL_SWITCH_CONF}, "
         f"min_box={MIN_BOX_WIDTH}x{MIN_BOX_HEIGHT}, min_area={MIN_BOX_AREA}, "
-        f"show_box_labels={SHOW_BOX_LABELS}",
+        f"show_box_labels={SHOW_BOX_LABELS}, label_smoothing={LABEL_SMOOTHING}, track_iou={TRACK_IOU}",
         flush=True,
     )
 
@@ -391,7 +424,7 @@ def main() -> None:
             break
 
         if frame_id % FRAME_STEP == 0:
-            annotated, predictions = run_frame(frame, detector, classifier, classes, device)
+            annotated, predictions = run_frame(frame, detector, classifier, classes, device, last_predictions)
             last_annotated = annotated
             last_predictions = predictions
             total, healthy, suspicious, uncertain = count_predictions(predictions)

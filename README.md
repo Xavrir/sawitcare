@@ -277,7 +277,7 @@ If the private dataset already exists, replace the first command with:
 kaggle datasets version -p kaggle_datasets/sawitcare-video-inference-assets -m "Update SawitCare video inference assets"
 ```
 
-The video inference kernel runs the first 300 frames of `examples/videos/road_rainforest_oil_palm_indonesia.mp4` with `yolo11n_best.pt` and `efficientnet_b0_best.pt`, then saves an annotated MP4 and CSV predictions under `/kaggle/working/sawitcare/outputs/`. It uses stricter presentation defaults (`CONF=0.45`, `NMS_IOU=0.35`, `CLASSIFIER_CONF=0.70`, minimum box-size filtering, and border-only boxes) to reduce noisy palm-crown detections. Set environment variables in the script environment to change the preview length or thresholds.
+The video inference kernel runs the first 300 frames of `examples/videos/road_rainforest_oil_palm_indonesia.mp4` with `yolo11n_best.pt` and `efficientnet_b0_best.pt`, then saves an annotated MP4 and CSV predictions under `/kaggle/working/sawitcare/outputs/`. It uses stricter presentation defaults (`CONF=0.45`, `NMS_IOU=0.35`, minimum box-size filtering, border-only boxes, and smoothed `healthy`/`suspicious` labels) to reduce noisy palm-crown detections and avoid `uncertain` flicker. Set environment variables in the script environment to change the preview length or thresholds.
 
 Latest nano detector comparison:
 
