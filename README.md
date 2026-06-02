@@ -235,6 +235,16 @@ python src/evaluation/compare_detectors.py --train-missing --data configs/detect
 
 If all checkpoints already exist under `models/detector/`, omit `--train-missing` to only evaluate them. The comparison writes JSON, CSV, and Markdown tables under `outputs/metrics/`.
 
+Create presentation charts from the saved comparison metrics:
+
+```bash
+python src/evaluation/plot_detector_comparison.py
+```
+
+The generated chart is committed for presentation use:
+
+![SawitCare YOLO nano detector comparison](outputs/metrics/detector_comparison_charts.png)
+
 Kaggle GPU run through the Kaggle CLI:
 
 ```bash

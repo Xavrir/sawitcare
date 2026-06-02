@@ -32,3 +32,4 @@ outputs/**
 !outputs/predictions/.gitkeep
 !outputs/metrics/
 !outputs/metrics/.gitkeep
+!outputs/metrics/detector_comparison*.*
