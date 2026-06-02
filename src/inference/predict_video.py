@@ -57,6 +57,13 @@ def confidence_float(value: str) -> float:
     return parsed
 
 
+def display_mode(value: str) -> str:
+    valid_modes = {"all", "healthy", "suspicious", "uncertain"}
+    if value not in valid_modes:
+        raise argparse.ArgumentTypeError(f"must be one of: {', '.join(sorted(valid_modes))}")
+    return value
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run SawitCare video inference.")
     parser.add_argument("--video", type=Path, required=True)
@@ -72,7 +79,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--nms-iou", type=iou_float, default=0.5, help="IoU threshold for merging duplicate tiled detections.")
     parser.add_argument("--classifier-conf", type=confidence_float, default=0.0, help="Show uncertain when classifier confidence is below this threshold.")
     parser.add_argument("--short-labels", action="store_true", help="Draw compact labels like H, S, and U.")
+    parser.add_argument("--hide-classifier-conf", action="store_true", help="Hide classifier confidence in drawn labels.")
     parser.add_argument("--hide-detector-conf", action="store_true", help="Hide detector confidence in drawn labels.")
+    parser.add_argument("--display-mode", type=display_mode, default="all", help="Which labels to draw on the video: all, healthy, suspicious, or uncertain.")
     parser.add_argument("--persist-annotations", action="store_true", help="Keep the last annotated frame visible between processed frames.")
     parser.add_argument("--summary-box", action="store_true", help="Draw a per-frame count summary in the top-left corner.")
     parser.add_argument("--device", default=None)
@@ -86,9 +95,11 @@ def count_predictions(predictions) -> tuple[int, int, int, int]:
     return len(predictions), healthy, suspicious, uncertain
 
 
-def draw_cached_predictions(frame, predictions, short_labels: bool, show_detector_conf: bool, summary_box: bool):
+def draw_cached_predictions(frame, predictions, short_labels: bool, show_classifier_conf: bool, show_detector_conf: bool, summary_box: bool, mode: str):
     annotated = frame.copy()
     for prediction in predictions:
+        if mode != "all" and prediction.health_label != mode:
+            continue
         draw_prediction(
             annotated,
             prediction.box,
@@ -96,6 +107,7 @@ def draw_cached_predictions(frame, predictions, short_labels: bool, show_detecto
             prediction.classifier_confidence,
             prediction.detector_confidence,
             short_labels,
+            show_classifier_conf,
             show_detector_conf,
         )
     if summary_box:
@@ -150,7 +162,9 @@ def main() -> None:
                 nms_iou=args.nms_iou,
                 classifier_conf=args.classifier_conf,
                 short_labels=args.short_labels,
+                show_classifier_conf=not args.hide_classifier_conf,
                 show_detector_conf=not args.hide_detector_conf,
+                display_mode=args.display_mode,
             )
             if args.summary_box:
                 total, healthy, suspicious, uncertain = count_predictions(preds)
@@ -176,7 +190,7 @@ def main() -> None:
         if frame_id % args.frame_step == 0 and last_annotated is not None:
             output_frame = last_annotated
         elif args.persist_annotations and last_predictions:
-            output_frame = draw_cached_predictions(frame, last_predictions, args.short_labels, not args.hide_detector_conf, args.summary_box)
+            output_frame = draw_cached_predictions(frame, last_predictions, args.short_labels, not args.hide_classifier_conf, not args.hide_detector_conf, args.summary_box, args.display_mode)
         else:
             output_frame = frame
         writer.write(output_frame)

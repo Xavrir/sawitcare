@@ -42,6 +42,13 @@ def confidence_float(value: str) -> float:
     return parsed
 
 
+def display_mode(value: str) -> str:
+    valid_modes = {"all", "healthy", "suspicious", "uncertain"}
+    if value not in valid_modes:
+        raise argparse.ArgumentTypeError(f"must be one of: {', '.join(sorted(valid_modes))}")
+    return value
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run SawitCare image inference.")
     parser.add_argument("--image", type=Path, required=True)
@@ -54,7 +61,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--nms-iou", type=iou_float, default=0.5, help="IoU threshold for merging duplicate tiled detections.")
     parser.add_argument("--classifier-conf", type=confidence_float, default=0.0, help="Show uncertain when classifier confidence is below this threshold.")
     parser.add_argument("--short-labels", action="store_true", help="Draw compact labels like H, S, and U.")
+    parser.add_argument("--hide-classifier-conf", action="store_true", help="Hide classifier confidence in drawn labels.")
     parser.add_argument("--hide-detector-conf", action="store_true", help="Hide detector confidence in drawn labels.")
+    parser.add_argument("--display-mode", type=display_mode, default="all", help="Which labels to draw on the image: all, healthy, suspicious, or uncertain.")
     parser.add_argument("--device", default=None)
     return parser.parse_args()
 
@@ -78,7 +87,9 @@ def main() -> None:
         nms_iou=args.nms_iou,
         classifier_conf=args.classifier_conf,
         short_labels=args.short_labels,
+        show_classifier_conf=not args.hide_classifier_conf,
         show_detector_conf=not args.hide_detector_conf,
+        display_mode=args.display_mode,
     )
     out_image = Path("outputs/images") / f"{args.image.stem}_annotated{args.image.suffix}"
     write_image(out_image, annotated)

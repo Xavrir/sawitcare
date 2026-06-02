@@ -1,0 +1,36 @@
+{
+  "source": "kaggle:rizkymirzaviandy/sawitcare-yolo-nano-comparison-dataset",
+  "completed_date": "2026-06-02",
+  "models": [
+    {
+      "name": "yolov8n",
+      "mode": "trained_on_kaggle",
+      "precision": 0.9780,
+      "recall": 0.9693,
+      "mAP50": 0.9901,
+      "mAP50_95": 0.8021,
+      "speed_inference_ms": 3.632,
+      "weight_mb": 5.96
+    },
+    {
+      "name": "yolo11n",
+      "mode": "existing_checkpoint",
+      "precision": 0.9779,
+      "recall": 0.9716,
+      "mAP50": 0.9899,
+      "mAP50_95": 0.8245,
+      "speed_inference_ms": 3.768,
+      "weight_mb": 5.22
+    },
+    {
+      "name": "yolo26",
+      "mode": "trained_on_kaggle",
+      "precision": 0.9791,
+      "recall": 0.9662,
+      "mAP50": 0.9900,
+      "mAP50_95": 0.8146,
+      "speed_inference_ms": 3.690,
+      "weight_mb": 5.14
+    }
+  ]
+}

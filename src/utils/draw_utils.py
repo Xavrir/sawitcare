@@ -23,12 +23,13 @@ def draw_prediction(
     cls_conf: float,
     det_conf: float | None = None,
     short_label: bool = False,
+    show_classifier_conf: bool = True,
     show_detector_conf: bool = True,
 ) -> np.ndarray:
     x1, y1, x2, y2 = box
     color = COLORS.get(label, (255, 255, 255))
     display_label = SHORT_LABELS.get(label, label) if short_label else label
-    text = f"{display_label} {cls_conf:.2f}"
+    text = f"{display_label} {cls_conf:.2f}" if show_classifier_conf else display_label
     if det_conf is not None and show_detector_conf:
         text += f" | tree {det_conf:.2f}"
     cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)

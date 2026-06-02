@@ -1,0 +1,17 @@
+{
+  "id": "rizkymirzaviandy/sawitcare-yolo-nano-comparison-dataset",
+  "title": "SawitCare YOLO Nano Comparison Dataset",
+  "code_file": "sawitcare_yolo_nano_comparison.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": true,
+  "dataset_sources": [
+    "rizkymirzaviandy/sawitcare-detection-roboflow-v19/1",
+    "rizkymirzaviandy/sawitcare-yolo-offline-assets/1"
+  ],
+  "competition_sources": [],
+  "kernel_sources": []
+}

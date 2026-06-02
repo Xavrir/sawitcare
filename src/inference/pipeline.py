@@ -181,7 +181,9 @@ def run_image_pipeline(
     nms_iou: float = 0.5,
     classifier_conf: float = 0.0,
     short_labels: bool = False,
+    show_classifier_conf: bool = True,
     show_detector_conf: bool = True,
+    display_mode: str = "all",
 ) -> tuple[np.ndarray, list[TreePrediction]]:
     annotated = image.copy()
     predictions: list[TreePrediction] = []
@@ -193,6 +195,7 @@ def run_image_pipeline(
         crop, padded_box = crop_with_padding(image, box, padding)
         label, cls_conf = classify_crop(classifier, classes, crop, device)
         display_label = label if cls_conf >= classifier_conf else "uncertain"
-        draw_prediction(annotated, padded_box, display_label, cls_conf, det_conf, short_labels, show_detector_conf)
+        if display_mode == "all" or display_label == display_mode:
+            draw_prediction(annotated, padded_box, display_label, cls_conf, det_conf, short_labels, show_classifier_conf, show_detector_conf)
         predictions.append(TreePrediction(tree_id, padded_box, det_conf, display_label, cls_conf, crop if keep_crops else None))
     return annotated, predictions

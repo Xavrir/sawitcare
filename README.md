@@ -7,7 +7,7 @@ This repository contains only the ML part. It does not include the full applicat
 ## Model architecture
 
 - Main detector: YOLO11n
-- Baseline detector: YOLOv8n
+- Baseline/comparison detectors: YOLOv8n and YOLO26
 - Classifier: EfficientNet B0
 - Detection class: `oil_palm_tree`
 - Health classes: `healthy`, `suspicious`
@@ -141,6 +141,12 @@ Train the YOLOv8n baseline:
 python src/training/train_detector_yolo.py --model yolov8n.pt --data configs/detection_data.yaml --imgsz 640 --epochs 100 --batch 8 --device 0
 ```
 
+Train the YOLO26 comparison model:
+
+```bash
+python src/training/train_detector_yolo.py --model yolo26n.pt --data configs/detection_data.yaml --imgsz 640 --epochs 100 --batch 8 --device 0
+```
+
 Best weights are copied to `models/detector/`.
 
 ## Train classifier
@@ -192,6 +198,21 @@ Outputs:
 - Annotated video: `outputs/videos/`
 - Frame-level CSV summary: `outputs/predictions/`
 
+## Presentation demo
+
+For a cleaner presentation command, use the demo wrapper:
+
+```bash
+python demo_sawitcare.py --video "path/to/drone_video.mp4"
+```
+
+The wrapper runs the recommended demo settings:
+
+- tiled YOLO11n inference for 1080p video
+- compact `H`, `S`, and `U` labels
+- top-left summary box
+- full confidence values saved in CSV, not shown on the video
+
 CSV columns:
 
 ```text
@@ -205,6 +226,33 @@ Detector test metrics:
 ```bash
 python src/evaluation/eval_detector.py --model models/detector/yolo11n_best.pt --data configs/detection_data.yaml
 ```
+
+Detector comparison across YOLOv8n, YOLO11n, and YOLO26:
+
+```bash
+python src/evaluation/compare_detectors.py --train-missing --data configs/detection_data.yaml --imgsz 640 --epochs 50 --batch 8 --device 0
+```
+
+If all checkpoints already exist under `models/detector/`, omit `--train-missing` to only evaluate them. The comparison writes JSON, CSV, and Markdown tables under `outputs/metrics/`.
+
+Kaggle GPU run through the Kaggle CLI:
+
+```bash
+python -m pip install kaggle
+kaggle kernels push -p kaggle
+```
+
+The Kaggle kernel script uses private Kaggle datasets for the Roboflow export, offline YOLO weights, and offline Python wheels. It trains `yolov8n` and YOLO26 from `yolo26n.pt`, evaluates the existing `yolo11n_best.pt` checkpoint, and writes comparison outputs under `/kaggle/working/sawitcare/outputs/metrics/`.
+
+Latest nano detector comparison:
+
+| Model | Mode | Precision | Recall | mAP50 | mAP50-95 | Infer ms/img | Weight MB |
+|---|---|---:|---:|---:|---:|---:|---:|
+| YOLOv8n | trained on Kaggle | 0.9780 | 0.9693 | 0.9901 | 0.8021 | 3.632 | 5.96 |
+| YOLO11n | existing checkpoint | 0.9779 | 0.9716 | 0.9899 | 0.8245 | 3.768 | 5.22 |
+| YOLO26n | trained on Kaggle | 0.9791 | 0.9662 | 0.9900 | 0.8146 | 3.690 | 5.14 |
+
+YOLO11n remains the best overall detector on this comparison because it has the highest recall and mAP50-95. YOLO26n has the highest precision.
 
 Classifier test metrics:
 
