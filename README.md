@@ -261,6 +261,23 @@ kaggle kernels push -p kaggle
 
 The Kaggle kernel script uses private Kaggle datasets for the Roboflow export, offline YOLO weights, and offline Python wheels. It trains `yolov8n` and YOLO26 from `yolo26n.pt`, evaluates the existing `yolo11n_best.pt` checkpoint, and writes comparison outputs under `/kaggle/working/sawitcare/outputs/metrics/`.
 
+Kaggle example-video inference through the Kaggle CLI:
+
+```bash
+kaggle datasets create -p kaggle_datasets/sawitcare-video-inference-assets
+kaggle kernels push -p kaggle/video_inference
+kaggle kernels status rizkymirzaviandy/sawitcare-example-video-inference
+kaggle kernels output rizkymirzaviandy/sawitcare-example-video-inference -p kaggle_outputs/video_inference
+```
+
+If the private dataset already exists, replace the first command with:
+
+```bash
+kaggle datasets version -p kaggle_datasets/sawitcare-video-inference-assets -m "Update SawitCare video inference assets"
+```
+
+The video inference kernel runs `examples/videos/road_rainforest_oil_palm_indonesia.mp4` with `yolo11n_best.pt` and `efficientnet_b0_best.pt`, then saves an annotated MP4 and CSV predictions under `/kaggle/working/sawitcare/outputs/`.
+
 Latest nano detector comparison:
 
 | Model | Mode | Precision | Recall | mAP50 | mAP50-95 | Infer ms/img | Weight MB |

@@ -1,0 +1,16 @@
+{
+  "id": "rizkymirzaviandy/sawitcare-example-video-inference",
+  "title": "SawitCare Example Video Inference",
+  "code_file": "sawitcare_example_video_inference.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": true,
+  "dataset_sources": [
+    "rizkymirzaviandy/sawitcare-video-inference-assets/1"
+  ],
+  "competition_sources": [],
+  "kernel_sources": []
+}
