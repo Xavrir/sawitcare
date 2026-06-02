@@ -18,17 +18,20 @@ FRAME_STEP = int(os.environ.get("FRAME_STEP", "15"))
 START_FRAME = int(os.environ.get("START_FRAME", "0"))
 MAX_FRAMES = os.environ.get("MAX_FRAMES", "300")
 MAX_FRAMES_INT = int(MAX_FRAMES) if MAX_FRAMES else None
-CONF = float(os.environ.get("CONF", "0.25"))
-CLASSIFIER_CONF = float(os.environ.get("CLASSIFIER_CONF", "0.0"))
+CONF = float(os.environ.get("CONF", "0.45"))
+CLASSIFIER_CONF = float(os.environ.get("CLASSIFIER_CONF", "0.70"))
 PADDING = float(os.environ.get("PADDING", "0.2"))
 TILE_SIZE = int(os.environ.get("TILE_SIZE", "640"))
 TILE_OVERLAP = float(os.environ.get("TILE_OVERLAP", "0.2"))
-NMS_IOU = float(os.environ.get("NMS_IOU", "0.5"))
+NMS_IOU = float(os.environ.get("NMS_IOU", "0.35"))
+MIN_BOX_WIDTH = int(os.environ.get("MIN_BOX_WIDTH", "28"))
+MIN_BOX_HEIGHT = int(os.environ.get("MIN_BOX_HEIGHT", "28"))
+MIN_BOX_AREA = int(os.environ.get("MIN_BOX_AREA", "1200"))
 SHORT_LABELS = os.environ.get("SHORT_LABELS", "1") != "0"
 SUMMARY_BOX = os.environ.get("SUMMARY_BOX", "1") != "0"
 PERSIST_ANNOTATIONS = os.environ.get("PERSIST_ANNOTATIONS", "1") != "0"
 SHOW_CLASSIFIER_CONF = os.environ.get("SHOW_CLASSIFIER_CONF", "0") != "0"
-SHOW_DETECTOR_CONF = os.environ.get("SHOW_DETECTOR_CONF", "1") != "0"
+SHOW_DETECTOR_CONF = os.environ.get("SHOW_DETECTOR_CONF", "0") != "0"
 
 
 def find_file(name: str) -> Path:
@@ -157,7 +160,9 @@ def _clip_box(box: tuple[int, int, int, int], width: int, height: int) -> tuple[
 
 def _valid_box(box: tuple[int, int, int, int]) -> bool:
     x1, y1, x2, y2 = box
-    return x2 > x1 and y2 > y1
+    width = x2 - x1
+    height = y2 - y1
+    return width >= MIN_BOX_WIDTH and height >= MIN_BOX_HEIGHT and width * height >= MIN_BOX_AREA
 
 
 def _box_iou(box: tuple[int, int, int, int], boxes: np.ndarray) -> np.ndarray:
@@ -340,6 +345,12 @@ def main() -> None:
     print(f"Classifier: {classifier_path}", flush=True)
     print(f"CUDA available: {torch.cuda.is_available()}", flush=True)
     print(f"Max frames: {MAX_FRAMES_INT if MAX_FRAMES_INT is not None else 'full video'}", flush=True)
+    print(
+        "Noise controls: "
+        f"conf={CONF}, nms_iou={NMS_IOU}, classifier_conf={CLASSIFIER_CONF}, "
+        f"min_box={MIN_BOX_WIDTH}x{MIN_BOX_HEIGHT}, min_area={MIN_BOX_AREA}",
+        flush=True,
+    )
 
     device = resolve_device()
     detector = YOLO(str(detector_path))
