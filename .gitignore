@@ -20,6 +20,7 @@ models/**/*.pt
 yolo*.pt
 runs/
 kaggle_datasets/
+kaggle_outputs/
 outputs/**
 !outputs/
 !outputs/images/

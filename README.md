@@ -202,6 +202,7 @@ Outputs:
 Committed example video:
 
 - `examples/videos/road_rainforest_oil_palm_indonesia.mp4`
+- `examples/videos/road_rainforest_oil_palm_indonesia_kaggle_annotated_preview.mp4` is a compressed Kaggle inference preview generated from the first 300 frames.
 - Source filename: `Aerial view of a road separating rainforest from an oil palm plantation in Indonesia.mp4`
 - Format: H.264, 1920x1080, 27.4 seconds
 
