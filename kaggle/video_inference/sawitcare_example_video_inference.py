@@ -16,7 +16,7 @@ DETECTOR_NAME = os.environ.get("DETECTOR_NAME", "yolo11n_best.pt")
 CLASSIFIER_NAME = os.environ.get("CLASSIFIER_NAME", "efficientnet_b0_best.pt")
 FRAME_STEP = int(os.environ.get("FRAME_STEP", "15"))
 START_FRAME = int(os.environ.get("START_FRAME", "0"))
-MAX_FRAMES = os.environ.get("MAX_FRAMES")
+MAX_FRAMES = os.environ.get("MAX_FRAMES", "300")
 MAX_FRAMES_INT = int(MAX_FRAMES) if MAX_FRAMES else None
 CONF = float(os.environ.get("CONF", "0.25"))
 CLASSIFIER_CONF = float(os.environ.get("CLASSIFIER_CONF", "0.0"))
@@ -335,10 +335,11 @@ def main() -> None:
     detector_path = find_file(DETECTOR_NAME)
     classifier_path = find_file(CLASSIFIER_NAME)
 
-    print(f"Input video: {video_path}")
-    print(f"Detector: {detector_path}")
-    print(f"Classifier: {classifier_path}")
-    print(f"CUDA available: {torch.cuda.is_available()}")
+    print(f"Input video: {video_path}", flush=True)
+    print(f"Detector: {detector_path}", flush=True)
+    print(f"Classifier: {classifier_path}", flush=True)
+    print(f"CUDA available: {torch.cuda.is_available()}", flush=True)
+    print(f"Max frames: {MAX_FRAMES_INT if MAX_FRAMES_INT is not None else 'full video'}", flush=True)
 
     device = resolve_device()
     detector = YOLO(str(detector_path))
@@ -404,7 +405,7 @@ def main() -> None:
                     }
                 )
             if len(rows) % 10 == 0:
-                print(f"Processed {len(rows)} inference frames / source frame {frame_id}")
+                print(f"Processed {len(rows)} inference frames / source frame {frame_id}", flush=True)
 
         if frame_id % FRAME_STEP == 0 and last_annotated is not None:
             output_frame = last_annotated
@@ -432,14 +433,14 @@ def main() -> None:
     latest_video = WORK_ROOT / "example_video_annotated.mp4"
     shutil.copy2(out_video, latest_video)
 
-    print("Done.")
-    print(f"Source frames reported: {source_frames}")
-    print(f"Written frames: {written_frames}")
-    print(f"Inference frames: {len(rows)}")
-    print(f"Saved annotated video: {out_video}")
-    print(f"Saved presentation copy: {latest_video}")
-    print(f"Saved frame summary CSV: {frame_summary}")
-    print(f"Saved tree predictions CSV: {tree_predictions}")
+    print("Done.", flush=True)
+    print(f"Source frames reported: {source_frames}", flush=True)
+    print(f"Written frames: {written_frames}", flush=True)
+    print(f"Inference frames: {len(rows)}", flush=True)
+    print(f"Saved annotated video: {out_video}", flush=True)
+    print(f"Saved presentation copy: {latest_video}", flush=True)
+    print(f"Saved frame summary CSV: {frame_summary}", flush=True)
+    print(f"Saved tree predictions CSV: {tree_predictions}", flush=True)
 
 
 if __name__ == "__main__":
