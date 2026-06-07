@@ -44,90 +44,136 @@ def annotate_bars(ax: plt.Axes, bars: Any, *, precision: int = 3) -> None:
         )
 
 
-def plot_detector_comparison(models: list[dict[str, Any]], outputs: list[Path]) -> None:
+def plot_detector_comparison(
+    models: list[dict[str, Any]], outputs: list[Path], *, chosen: str = "yolo11n"
+) -> None:
     labels = [MODEL_LABELS.get(model["name"], model["name"]) for model in models]
-    colors = ["#2563eb", "#16a34a", "#ea580c"]
+    chosen_idx = next(
+        (i for i, model in enumerate(models) if model["name"] == chosen), None
+    )
 
     accuracy_metrics = [
         ("precision", "Precision"),
         ("recall", "Recall"),
         ("mAP50_95", "mAP50-95"),
     ]
+    metric_colors = ["#2563eb", "#16a34a", "#ea580c"]
     x = np.arange(len(labels))
-    width = 0.24
+    width = 0.26
 
     plt.rcParams.update(
         {
             "font.family": "DejaVu Sans",
             "axes.titlesize": 15,
             "axes.labelsize": 10,
-            "xtick.labelsize": 9,
+            "xtick.labelsize": 10,
             "ytick.labelsize": 9,
         }
     )
 
-    fig, axes = plt.subplots(1, 2, figsize=(13.5, 6.2), dpi=180)
+    fig, axes = plt.subplots(1, 2, figsize=(13.5, 6.6), dpi=180)
     fig.patch.set_facecolor("#f8fafc")
 
+    # --- Left: accuracy metrics ---
     ax = axes[0]
     ax.set_facecolor("#ffffff")
-    for offset, (key, metric_label) in zip(
-        [-width, 0, width], accuracy_metrics, strict=True
+    for offset, (key, metric_label), color in zip(
+        [-width, 0, width], accuracy_metrics, metric_colors, strict=True
     ):
         values = [float(model[key]) for model in models]
-        bars = ax.bar(x + offset, values, width, label=metric_label, alpha=0.92)
+        bars = ax.bar(
+            x + offset, values, width, label=metric_label, color=color, alpha=0.92
+        )
         annotate_bars(ax, bars)
 
-    ax.set_title("SawitCare Detector Accuracy")
+    ax.set_title("Detection Accuracy (higher is better)")
     ax.set_ylabel("Score")
-    ax.set_ylim(0.78, 1.0)
+    ax.set_ylim(0.78, 1.02)
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.grid(axis="y", linestyle="--", linewidth=0.8, alpha=0.3)
-    ax.legend(loc="lower right", frameon=False)
+    # Legend lifted above the axes so it never overlaps the bars.
+    ax.legend(
+        loc="lower center",
+        bbox_to_anchor=(0.5, 1.10),
+        ncol=3,
+        frameon=False,
+        fontsize=9,
+    )
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
+    # --- Right: runtime and size ---
     ax = axes[1]
     ax.set_facecolor("#ffffff")
     speed_values = [float(model["speed_inference_ms"]) for model in models]
     weight_values = [float(model["weight_mb"]) for model in models]
 
-    bars_speed = ax.bar(x - width / 2, speed_values, width, color=colors[0], label="Infer ms/img")
-    bars_weight = ax.bar(x + width / 2, weight_values, width, color=colors[2], label="Weight MB")
+    bars_speed = ax.bar(
+        x - width / 2, speed_values, width, color="#2563eb", label="Infer ms/img"
+    )
+    bars_weight = ax.bar(
+        x + width / 2, weight_values, width, color="#ea580c", label="Weight MB"
+    )
     annotate_bars(ax, bars_speed)
     annotate_bars(ax, bars_weight, precision=2)
 
-    ax.set_title("Runtime and Model Size")
-    ax.set_ylabel("Lower is better")
-    ax.set_ylim(0, max(max(speed_values), max(weight_values)) + 1.0)
+    ax.set_title("Runtime and Model Size (lower is better)")
+    ax.set_ylabel("Value")
+    ax.set_ylim(0, max(max(speed_values), max(weight_values)) + 1.4)
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.grid(axis="y", linestyle="--", linewidth=0.8, alpha=0.3)
-    ax.legend(loc="upper right", frameon=False)
+    ax.legend(
+        loc="lower center",
+        bbox_to_anchor=(0.5, 1.10),
+        ncol=2,
+        frameon=False,
+        fontsize=9,
+    )
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
+    # --- Highlight the chosen model on both panels ---
+    if chosen_idx is not None:
+        chosen_label = labels[chosen_idx]
+        for axis in axes:
+            axis.axvspan(
+                chosen_idx - 0.5,
+                chosen_idx + 0.5,
+                color="#fde68a",
+                alpha=0.35,
+                zorder=0,
+            )
+            for tick in axis.get_xticklabels():
+                if tick.get_text() == chosen_label:
+                    tick.set_fontweight("bold")
+                    tick.set_color("#b45309")
+
     best_map = max(models, key=lambda model: float(model["mAP50_95"]))
-    best_precision = max(models, key=lambda model: float(model["precision"]))
+    chosen_name = MODEL_LABELS.get(chosen, chosen)
     subtitle = (
-        f"Best overall mAP50-95: {MODEL_LABELS.get(best_map['name'], best_map['name'])} "
-        f"({best_map['mAP50_95']:.4f})  |  "
-        f"Best precision: {MODEL_LABELS.get(best_precision['name'], best_precision['name'])} "
-        f"({best_precision['precision']:.4f})"
+        f"Selected model: {chosen_name}  -  best mAP50-95 "
+        f"({best_map['mAP50_95']:.3f}) and highest recall, at nano size and speed"
     )
-    fig.suptitle("YOLO Nano Comparison for SawitCare", fontsize=20, fontweight="bold", color="#0f172a")
-    fig.text(0.5, 0.925, subtitle, ha="center", fontsize=10.5, color="#334155")
+    fig.suptitle(
+        "YOLO Nano Comparison for SawitCare",
+        fontsize=20,
+        fontweight="bold",
+        color="#0f172a",
+        y=0.99,
+    )
+    fig.text(0.5, 0.935, subtitle, ha="center", fontsize=11, color="#334155")
     fig.text(
         0.5,
-        0.035,
+        0.02,
         "Source: Kaggle run rizkymirzaviandy/sawitcare-yolo-nano-comparison-dataset, completed 2026-06-02.",
         ha="center",
         fontsize=8.5,
         color="#64748b",
     )
 
-    fig.tight_layout(rect=(0.025, 0.07, 0.975, 0.89))
+    fig.tight_layout(rect=(0.025, 0.05, 0.975, 0.88))
 
     for output in outputs:
         output.parent.mkdir(parents=True, exist_ok=True)
